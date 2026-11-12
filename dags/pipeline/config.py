@@ -35,3 +35,59 @@ COLUMN_MAPPING = {
     "Seasonality": "seasonality",
     "Days Before Departure": "days_before_departure",
 }
+
+# ---------------------------------------------------------------------------
+# Validation settings (used by validate.py)
+# ---------------------------------------------------------------------------
+VALIDATED_TABLE = "flights_validated"
+REJECTED_TABLE = "flights_rejected"
+
+# Columns the project brief says must exist
+REQUIRED_COLUMNS = [
+    "airline",
+    "source",
+    "destination",
+    "base_fare_bdt",
+    "tax_surcharge_bdt",
+    "total_fare_bdt",
+]
+
+# Columns a row cannot do without. total_fare_bdt is NOT here on purpose:
+# if it is missing, the transformation step calculates it.
+NOT_NULL_COLUMNS = [
+    "airline",
+    "source",
+    "destination",
+    "base_fare_bdt",
+    "tax_surcharge_bdt",
+    "seasonality",
+]
+
+TEXT_COLUMNS = [
+    "airline",
+    "source",
+    "source_name",
+    "destination",
+    "destination_name",
+    "stopovers",
+    "aircraft_type",
+    "travel_class",
+    "booking_source",
+    "seasonality",
+]
+
+NUMERIC_COLUMNS = [
+    "duration_hrs",
+    "base_fare_bdt",
+    "tax_surcharge_bdt",
+    "total_fare_bdt",
+    "days_before_departure",
+]
+
+DATETIME_COLUMNS = ["departure_datetime", "arrival_datetime"]
+
+VALID_SEASONS = ["Regular", "Winter Holidays", "Eid", "Hajj"]
+
+# A total fare is flagged as a mismatch if it differs from
+# base fare + tax by more than this many BDT (allows for rounding)
+FARE_MISMATCH_TOLERANCE = 1.0

@@ -10,6 +10,7 @@ analysis-ready tables and KPIs.
 |---|---|---|
 | 1 | `create_tables` | Creates the MySQL tables if they don't exist |
 | 2 | `ingest_csv` | Loads the CSV into the MySQL staging table and verifies it |
+| 3 | `validate_data` | Checks every staged row; splits it into validated and rejected tables |
 
 ## Databases
 
@@ -32,7 +33,7 @@ from datetime import datetime, timedelta
 
 from airflow.sdk import dag, task
 
-from pipeline import alerts, ingest, tables
+from pipeline import alerts, ingest, tables, validate
 
 # Settings inherited by every task in the DAG
 default_args = {
@@ -76,7 +77,30 @@ def flight_price_pipeline():
         """
         return ingest.load_csv_to_staging()
 
-    create_tables() >> ingest_csv()
+    @task
+    def validate_data():
+        """
+        ### Validate data
+        Reads `flights_staging` and checks that the required columns exist.
+        Then, for every row:
+
+        - **Corrects** extra spaces in text and lowercase airport codes
+        - **Rejects** rows with missing required values, non-numeric fares,
+          invalid dates, zero or negative fares, invalid airport codes,
+          the same source and destination, arrival not after departure,
+          or an unknown season
+        - **Flags** (but keeps) rows where total fare is not base fare + tax
+
+        Valid rows go to `flights_validated`, rejected rows to `flights_rejected`
+        with a `rejection_reason`.
+
+        **Checks:** validated + rejected rows must equal the staged rows.
+
+        **Returns:** a summary of row counts.
+        """
+        return validate.validate_staging_data()
+
+    create_tables() >> ingest_csv() >> validate_data()
 
 
 flight_price_pipeline()

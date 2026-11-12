@@ -7,6 +7,7 @@ import pandas as pd
 from airflow.providers.mysql.hooks.mysql import MySqlHook
 
 from pipeline.config import COLUMN_MAPPING, CSV_PATH, MYSQL_CONN_ID, STAGING_TABLE
+from pipeline.db import replace_table_contents
 
 
 def load_csv_to_staging():
@@ -40,26 +41,15 @@ def load_csv_to_staging():
         df[column] = pd.to_numeric(df[column], errors="coerce").round(2)
     df["days_before_departure"] = pd.to_numeric(df["days_before_departure"], errors="coerce")
 
-    # Database drivers need Python None for missing values, not pandas' NaN/NaT
-    df = df.astype(object).where(df.notna(), None)
-    rows = list(df.itertuples(index=False, name=None))
-
     # 5. Empty the staging table, then insert all rows
     hook = MySqlHook(mysql_conn_id=MYSQL_CONN_ID)
-    hook.run(f"TRUNCATE TABLE {STAGING_TABLE}")
-    hook.insert_rows(
-        table=STAGING_TABLE,
-        rows=rows,
-        target_fields=list(df.columns),
-        commit_every=5000,
-        executemany=True,  # sends rows in batches instead of one at a time
-    )
+    replace_table_contents(hook, STAGING_TABLE, df)
 
     # 6. Verify: row count and fare total in MySQL must match the CSV
     row_count, fare_sum = hook.get_first(
         f"SELECT COUNT(*), SUM(total_fare_bdt) FROM {STAGING_TABLE}"
     )
-    expected_fare_sum = pd.to_numeric(df["total_fare_bdt"]).sum()
+    expected_fare_sum = df["total_fare_bdt"].sum()
 
     if row_count != len(df):
         raise ValueError(f"Row count mismatch: CSV has {len(df)}, MySQL has {row_count}")
