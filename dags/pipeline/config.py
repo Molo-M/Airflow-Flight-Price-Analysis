@@ -10,6 +10,7 @@ POSTGRES_CONN_ID = "postgres_analytics"
 # File locations inside the Airflow containers
 CSV_PATH = "/opt/airflow/data/Flight_Price_Dataset_of_Bangladesh.csv"
 MYSQL_TABLES_SQL = "/opt/airflow/sql/mysql_tables.sql"
+POSTGRES_TABLES_SQL = "/opt/airflow/sql/postgres_tables.sql"
 
 # Table names
 STAGING_TABLE = "flights_staging"
@@ -105,3 +106,22 @@ KPI_SEASONAL_FARE_VARIATION = "kpi_seasonal_fare_variation"
 KPI_PEAK_VS_NON_PEAK = "kpi_peak_vs_non_peak"
 KPI_BOOKING_COUNT_BY_AIRLINE = "kpi_booking_count_by_airline"
 KPI_POPULAR_ROUTES = "kpi_popular_routes"
+
+# ---------------------------------------------------------------------------
+# Loading settings (used by load.py)
+# ---------------------------------------------------------------------------
+# Tables copied from MySQL to PostgreSQL, in this order
+LOAD_TABLES = [
+    ENRICHED_TABLE,
+    KPI_AVG_FARE_BY_AIRLINE,
+    KPI_SEASONAL_FARE_VARIATION,
+    KPI_PEAK_VS_NON_PEAK,
+    KPI_BOOKING_COUNT_BY_AIRLINE,
+    KPI_POPULAR_ROUTES,
+]
+
+# Flag columns stored as 1/0 in MySQL that become true/false BOOLEAN columns in PostgreSQL
+BOOLEAN_COLUMNS = ["fare_mismatch", "total_fare_calculated", "is_peak_season"]
+
+# Number of rows sent to PostgreSQL in each INSERT statement
+POSTGRES_BATCH_SIZE = 1000

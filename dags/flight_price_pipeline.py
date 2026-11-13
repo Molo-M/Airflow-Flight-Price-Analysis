@@ -8,11 +8,12 @@ analysis-ready tables and KPIs.
 
 | Order | Task | What it does |
 |---|---|---|
-| 1 | `create_tables` | Creates the MySQL tables if they don't exist |
+| 1 | `create_tables` | Creates the MySQL and PostgreSQL tables if they don't exist |
 | 2 | `ingest_csv` | Loads the CSV into the MySQL staging table and verifies it |
 | 3 | `validate_data` | Checks every staged row; splits it into validated and rejected tables |
 | 4 | `transform_data` | Fills missing total fares and adds derived columns |
 | 5 | `compute_kpis` | Computes the four KPIs into KPI tables |
+| 6 | `load_to_postgres` | Copies the enriched data and KPI tables to PostgreSQL in one transaction |
 
 ## Databases
 
@@ -35,7 +36,7 @@ from datetime import datetime, timedelta
 
 from airflow.sdk import dag, task
 
-from pipeline import alerts, ingest, kpis, tables, transform, validate
+from pipeline import alerts, ingest, kpis, load, tables, transform, validate
 
 # Settings inherited by every task in the DAG
 default_args = {
@@ -59,10 +60,12 @@ def flight_price_pipeline():
     def create_tables():
         """
         ### Create tables
-        Runs `sql/mysql_tables.sql` against the MySQL staging database.
+        Runs `sql/mysql_tables.sql` against the MySQL staging database and
+        `sql/postgres_tables.sql` against the PostgreSQL analytics database.
         Uses `CREATE TABLE IF NOT EXISTS`, so it is safe to run every time.
         """
         tables.create_mysql_tables()
+        tables.create_postgres_tables()
 
     @task
     def ingest_csv():
@@ -140,7 +143,33 @@ def flight_price_pipeline():
         """
         return kpis.compute_kpis()
 
-    create_tables() >> ingest_csv() >> validate_data() >> transform_data() >> compute_kpis()
+    @task
+    def load_to_postgres():
+        """
+        ### Load to PostgreSQL
+        Copies `flights_enriched` and the five KPI tables from MySQL to the
+        PostgreSQL analytics database.
+
+        - **Consistency:** all six tables are replaced in **one transaction**.
+          If anything fails, everything is rolled back and PostgreSQL keeps
+          its previous data. Readers see the old data until the commit.
+        - **Latency:** rows are inserted in batches of 1,000 per statement.
+        - Flag columns become true/false `BOOLEAN` columns.
+
+        **Checks:** each table's row count must match MySQL before committing.
+
+        **Returns:** the number of rows loaded into each table.
+        """
+        return load.load_to_postgres()
+
+    (
+        create_tables()
+        >> ingest_csv()
+        >> validate_data()
+        >> transform_data()
+        >> compute_kpis()
+        >> load_to_postgres()
+    )
 
 
 flight_price_pipeline()
