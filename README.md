@@ -29,7 +29,7 @@ An end-to-end, fully automated data pipeline that processes the **Flight Price D
 
 | Deliverable | File | Description |
 |---|---|---|
-| **Project report** | [docs/Report.pdf](docs/Flight_Price_Analysis_Report.pptx) | Non-technical report for stakeholders: findings, how the pipeline works, data quality, KPIs, challenges and next steps |
+| **Project report** | [Report.pdf](docs/Report.pdf) | Non-technical report for stakeholders: findings, how the pipeline works, data quality, KPIs, challenges and next steps |
 | **Project brief** | [Airflow-Project.md](Airflow-Project.md) | The original project description and requirements |
 | **Source data** | [data/Flight_Price_Dataset_of_Bangladesh.csv](data/Flight_Price_Dataset_of_Bangladesh.csv) | The raw dataset the pipeline processes (57,000 bookings, from Kaggle) |
 | **Airflow DAG** | [dags/flight_price_pipeline.py](dags/flight_price_pipeline.py) | The pipeline definition: six tasks, their order, documentation, retries and alerts |
