@@ -11,6 +11,8 @@ analysis-ready tables and KPIs.
 | 1 | `create_tables` | Creates the MySQL tables if they don't exist |
 | 2 | `ingest_csv` | Loads the CSV into the MySQL staging table and verifies it |
 | 3 | `validate_data` | Checks every staged row; splits it into validated and rejected tables |
+| 4 | `transform_data` | Fills missing total fares and adds derived columns |
+| 5 | `compute_kpis` | Computes the four KPIs into KPI tables |
 
 ## Databases
 
@@ -33,7 +35,7 @@ from datetime import datetime, timedelta
 
 from airflow.sdk import dag, task
 
-from pipeline import alerts, ingest, tables, validate
+from pipeline import alerts, ingest, kpis, tables, transform, validate
 
 # Settings inherited by every task in the DAG
 default_args = {
@@ -100,7 +102,45 @@ def flight_price_pipeline():
         """
         return validate.validate_staging_data()
 
-    create_tables() >> ingest_csv() >> validate_data()
+    @task
+    def transform_data():
+        """
+        ### Transform data
+        Reads `flights_validated` and writes `flights_enriched` with:
+
+        - **Total fare filled in** where missing: base fare + tax & surcharge
+        - `total_fare_calculated`: 1 if the total was calculated here
+        - `is_peak_season`: 1 for Eid, Hajj and Winter Holidays, 0 for Regular
+        - `route`: source and destination joined, e.g. `DAC-CXB`
+
+        **Checks:** no rows lost, and no total fare still missing.
+
+        **Returns:** a summary of row counts.
+        """
+        return transform.transform_validated_data()
+
+    @task
+    def compute_kpis():
+        """
+        ### Compute KPIs
+        Reads `flights_enriched` and writes one table per KPI
+        (each booking is one row of the dataset):
+
+        | Table | KPI |
+        |---|---|
+        | `kpi_avg_fare_by_airline` | Mean total fare per airline |
+        | `kpi_seasonal_fare_variation` | Mean fare per season vs the non-peak average |
+        | `kpi_peak_vs_non_peak` | All peak seasons together vs non-peak |
+        | `kpi_booking_count_by_airline` | Bookings per airline and share of total |
+        | `kpi_popular_routes` | Routes ranked by booking count |
+
+        **Checks:** count-based KPIs must account for every booking exactly once.
+
+        **Returns:** the number of rows in each KPI table.
+        """
+        return kpis.compute_kpis()
+
+    create_tables() >> ingest_csv() >> validate_data() >> transform_data() >> compute_kpis()
 
 
 flight_price_pipeline()

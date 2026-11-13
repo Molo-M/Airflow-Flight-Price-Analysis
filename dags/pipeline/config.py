@@ -91,3 +91,17 @@ VALID_SEASONS = ["Regular", "Winter Holidays", "Eid", "Hajj"]
 # A total fare is flagged as a mismatch if it differs from
 # base fare + tax by more than this many BDT (allows for rounding)
 FARE_MISMATCH_TOLERANCE = 1.0
+
+# ---------------------------------------------------------------------------
+# Transformation and KPI settings (used by transform.py and kpis.py)
+# ---------------------------------------------------------------------------
+ENRICHED_TABLE = "flights_enriched"
+
+# Seasons counted as peak travel periods. Everything else (Regular) is non-peak.
+PEAK_SEASONS = ["Eid", "Hajj", "Winter Holidays"]
+
+KPI_AVG_FARE_BY_AIRLINE = "kpi_avg_fare_by_airline"
+KPI_SEASONAL_FARE_VARIATION = "kpi_seasonal_fare_variation"
+KPI_PEAK_VS_NON_PEAK = "kpi_peak_vs_non_peak"
+KPI_BOOKING_COUNT_BY_AIRLINE = "kpi_booking_count_by_airline"
+KPI_POPULAR_ROUTES = "kpi_popular_routes"
